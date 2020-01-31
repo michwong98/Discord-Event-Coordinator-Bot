@@ -1,0 +1,27 @@
+{
+  "name": "discord-event-coordinator",
+  "version": "0.0.1",
+  "description": "Discord Chat Client Event Coordinator Bot",
+  "main": "bot.js",
+  "dependencies": {
+    "dblapi.js": "^2.3.1",
+    "discord.js": "^11.5.1",
+    "discord.io": "^2.5.3",
+    "require": "^2.4.20",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michwong98/Discord-Event-Coordinator-Bot.git"
+  },
+  "author": "michwong98",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/michwong98/Discord-Event-Coordinator-Bot/issues"
+  },
+  "homepage": "https://github.com/michwong98/Discord-Event-Coordinator-Bot#readme"
+}
