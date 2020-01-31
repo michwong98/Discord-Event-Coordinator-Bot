@@ -1,6 +1,6 @@
 var Discord = require('discord.js');
 var auth = require('./auth.json');
-var eventMessages = [];
+var msgCache = [];
 
 const client = new Discord.Client();
 
@@ -19,40 +19,76 @@ client.on('message', async msg => {
 				args = args.split(",");
 
 				try {
-					var eventName = (/S+/.test(args[0].trim()) ? args[0].trim() : "No Name Given");
+					//Validates input.
+					var msgName = (/\S+/.test(args[0].trim()) ? args[0].trim() : "No Name Given");
 				}
 				catch (error) {
-					//console.error(error);
-					var eventName = "No Name Given";
+					//Default name for scheduled event.
+					var msgName = "No Name Given";
 				}
 
 				try {
-					var eventTime = args[1].trim();
+					var msgTime = args[1].trim();
 				}
 				catch (error) {
-					//console.error(error);
-					var eventTime = "No Time Given";
+					//Default value for scheduled time.
+					var msgTime = "No Time Given";
 				}
 				try {
-					var eventSlots = (/^\d+$/.test(args[2].trim()) ? args[2].trim() : 10);
+					//Validates unsigned number.
+					var msgCapacity = (/^\d+$/.test(args[2].trim()) ? args[2].trim() : 10);
 				} catch (error) {
-					//console.error(error);
-					var eventSlots = 10;
+					//Default value of 10 for maximum capacity.
+					var msgCapacity = 10;
 				}
 
+				//Creates new message object.
+				const newMsg = await msg.channel.send(`> *Event Name*: **${msgName}**\n> *Event Time*: **${msgTime}**\n> *Capacity*: **0/${msgCapacity}**\n> \n> *Please be gentle with me. I am hosted on a potato.*\n> React with :white_check_mark: to join.`);
+				msgCache.push({
+					message_id: newMsg.id,
+					name: msgName,
+					time: msgTime,
+					capacity: msgCapacity,
+					roster: []
+				});
+				console.log(newMsg.id);
+				//Reaction commands to interact with scheduled event.
+				await newMsg.react("✅"); await newMsg.react("❌");
 
-				const newEvent = await msg.channel.send(`> Event Name: ${eventName}\n> Event Time: ${eventTime}\n> Slots Taken: 0/${eventSlots}`);
-				eventMessages.push(newEvent);
+				break;
 
 		}
 
 	}
 });
 
-client.on("raw", packet => {
-	if (packet.t === "MESSAGE_REACTION_ADD") {
-		console.log("Reaction added");
+client.on("raw", async packet => {
+	if (packet.t === "MESSAGE_REACTION_ADD" && packet.d.user_id !== auth.user_id) {
+		try {
+			console.log(`User_id ${packet.d.user_id} reacted with ${packet.d.emoji.name} to message ${packet.d.message_id}.`);
+
+			//Validate that reacted message is within cached messages.
+			let cachedMsg = false;
+			for (element of msgCache) {
+				if (element.message_id === packet.d.message_id) {
+					cachedMsg = element;
+					break;
+				}
+			}
+
+			if (cachedMsg) {
+				cachedMsg.roster.push(packet.d.user_id);
+				console.log(cachedMsg.roster);
+			}
+
+
+
+		}
+		catch (error) {
+			console.error(error);
+		}
 	}
 });
+
 
 client.login(auth.token);
