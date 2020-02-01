@@ -13,7 +13,6 @@ client.on('message', async msg => {
 		var cmd = msg.content.substring(2).split(" ")[0].toLowerCase();
 		var x = msg.content.indexOf(" ");
 		var args = (x === -1 ? "" : msg.content.substring(x + 1));
-
 		switch (cmd) {
 			case "newevent":
 				args = args.split(",");
@@ -43,18 +42,18 @@ client.on('message', async msg => {
 				}
 
 				//Creates new message object.
-				const newMsg = await msg.channel.send(`> *Event Name*: **${msgName}**\n> *Event Time*: **${msgTime}**\n> *Capacity*: **0/${msgCapacity}**\n> \n> *Please be gentle with me. I am hosted on a potato.*\n> React with :white_check_mark: to join.`);
+				const newMsg = await msg.channel.send(`> **Event Name**: *${msgName}*\n> **Event Time**: *${msgTime}*\n> **Capacity**: *0/${msgCapacity}*\n> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`);
+				msg.delete();
 				msgCache.push({
 					message_id: newMsg.id,
+					msgObj: newMsg,
 					name: msgName,
 					time: msgTime,
 					capacity: msgCapacity,
 					roster: []
 				});
-				console.log(newMsg.id);
 				//Reaction commands to interact with scheduled event.
 				await newMsg.react("✅"); await newMsg.react("❌");
-
 				break;
 
 		}
@@ -76,17 +75,54 @@ client.on("raw", async packet => {
 				}
 			}
 
+
+
 			if (cachedMsg) {
-				cachedMsg.roster.push(packet.d.user_id);
-				console.log(cachedMsg.roster);
+
+				cachedMsg.msgObj.reactions.forEach(reaction => reaction.remove(packet.d.user_id));
+
+				let bool = false;
+				
+				for (member of cachedMsg.roster) {
+					if (packet.d.user_id === member.user_id) {
+						bool = true;
+					}
+				}
+				
+
+				if (! bool && packet.d.emoji.name === "✅" && cachedMsg.capacity > cachedMsg.roster.length) {
+
+					client.fetchUser(packet.d.user_id)
+					.then(user => {
+						cachedMsg.roster.push({
+							user_id: user.id,
+							username: user.username
+						});
+						return cachedMsg.roster;
+					})
+					.then(roster => {
+						var rosterString = roster.reduce((rosterString, member) => {
+							return rosterString + `> *${member.username}*\n`;
+						}, "");
+						cachedMsg.msgObj.edit(
+							`> **Event Name:**  *${cachedMsg.name}*\n` +
+							`> **Event Time:**  *${cachedMsg.time}*\n` +
+							`> **Capacity:** *${cachedMsg.roster.length}/${cachedMsg.capacity}*\n` +
+							`> \n${rosterString}` +
+							`> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`
+							);
+					})
+					.catch(error =>
+						console.error(error)
+					);
+
+				}
 			}
-
-
-
 		}
 		catch (error) {
 			console.error(error);
 		}
+		
 	}
 });
 
