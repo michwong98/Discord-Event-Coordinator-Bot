@@ -38,11 +38,13 @@ client.on('message', async msg => {
 					var msgCapacity = (/^\d+$/.test(args[2].trim()) ? args[2].trim() : 10);
 				} catch (error) {
 					//Default value of 10 for maximum capacity.
+					//TODO: Default no capacity.
 					var msgCapacity = 10;
 				}
 
 				//Creates new message object.
 				const newMsg = await msg.channel.send(`> **Event Name**: *${msgName}*\n> **Event Time**: *${msgTime}*\n> **Capacity**: *0/${msgCapacity}*\n> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`);
+				newMsg.pin();
 				msg.delete();
 				msgCache.push({
 					message_id: newMsg.id,
@@ -56,6 +58,10 @@ client.on('message', async msg => {
 				await newMsg.react("✅"); await newMsg.react("❌");
 				break;
 
+			case "info":
+			case "help":
+				msg.channel.send("Use e!newevent to schedule a new event!\ne!newevent [Event Name (default: No Name Given)], [Event Time (default: No Time Given)], [Maximum Capacity (default: 10)]");
+				break;
 		}
 
 	}
@@ -64,7 +70,6 @@ client.on('message', async msg => {
 client.on("raw", async packet => {
 	if (packet.t === "MESSAGE_REACTION_ADD" && packet.d.user_id !== auth.user_id) {
 		try {
-			console.log(`User_id ${packet.d.user_id} reacted with ${packet.d.emoji.name} to message ${packet.d.message_id}.`);
 
 			//Validate that reacted message is within cached messages.
 			let cachedMsg = false;
@@ -79,17 +84,24 @@ client.on("raw", async packet => {
 
 			if (cachedMsg) {
 
+				//Logs reaction.
+				console.log(`User_id ${packet.d.user_id} reacted with ${packet.d.emoji.name} to message ${packet.d.message_id}.`);
+
+				//Clears any reactions to the message beside the bot.
 				cachedMsg.msgObj.reactions.forEach(reaction => reaction.remove(packet.d.user_id));
 
+				//Boolean <- Does the user exist in the event roster?
 				let bool = false;
 				
 				for (member of cachedMsg.roster) {
 					if (packet.d.user_id === member.user_id) {
+						//User exists.
 						bool = true;
+						break;
 					}
 				}
 				
-
+				//TODO: Remove user from event.
 				if (! bool && packet.d.emoji.name === "✅" && cachedMsg.capacity > cachedMsg.roster.length) {
 
 					client.fetchUser(packet.d.user_id)
@@ -101,9 +113,12 @@ client.on("raw", async packet => {
 						return cachedMsg.roster;
 					})
 					.then(roster => {
+						//String of all roster members.
 						var rosterString = roster.reduce((rosterString, member) => {
 							return rosterString + `> *${member.username}*\n`;
 						}, "");
+
+						//Edit to update the event message.
 						cachedMsg.msgObj.edit(
 							`> **Event Name:**  *${cachedMsg.name}*\n` +
 							`> **Event Time:**  *${cachedMsg.time}*\n` +
@@ -125,6 +140,5 @@ client.on("raw", async packet => {
 		
 	}
 });
-
 
 client.login(auth.token);
