@@ -1,8 +1,9 @@
-var Discord = require('discord.js');
-var auth = require('./auth.json');
+var Discord = require("discord.js");
+var auth = require("./auth.json");
 var msgCache = [];
+var mysql = require("mysql")
 
-const client = new Discord.Client();
+var client = new Discord.Client();
 
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
@@ -141,4 +142,17 @@ client.on("raw", async packet => {
 	}
 });
 
+var db = mysql.createConnection({
+	host: auth.db_host,
+	user: auth.db_user,
+	password: auth.db_pw
+});
+
+//Database connect.
+db.connect(function (error) {
+	if (error) throw error;
+	console.log("Database connected.");
+});
+
+//Discord Bot Client connect.
 client.login(auth.token);
