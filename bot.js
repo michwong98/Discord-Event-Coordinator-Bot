@@ -1,6 +1,7 @@
-var Discord = require("discord.js");
-var auth = require("./auth.json");
-var mysql = require("mysql")
+const Discord = require("discord.js");
+const auth = require("./auth.json");
+const mysql = require("mysql")
+const Handler = require("./handler.js");
 
 var client = new Discord.Client();
 
@@ -41,6 +42,8 @@ class Database {
 
 const database = new Database(auth);
 
+const handler = new Handler(database, client);
+
 client.on('ready', () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 	});
@@ -80,6 +83,7 @@ client.on('message', async msg => {
 				}
 
 				const newMsg = await msg.channel.send(`> **Event Name**: *${msgName}*\n> **Event Time**: *${msgTime}*\n> **Capacity**: *0/${msgCapacity}*\n> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`);
+				newMsg.pin();
 				msg.delete();
 				//Reaction commands to interact with scheduled event.
 				await newMsg.react("✅"); await newMsg.react("❌"); await newMsg.react("🚫");
@@ -113,136 +117,6 @@ client.on('message', async msg => {
 
 client.on("raw", async packet => {
 	if (packet.t === "MESSAGE_REACTION_ADD" && packet.d.user_id !== auth.user_id) {
-		let message_info;
-		database.query(`SELECT * FROM messages where message_id = '${packet.d.message_id}';`)
-		.then(rows => {
-			if (rows.length <= 1)  {
-				//Message exists in database.
-				message_info = rows[0];
-				const databasePromise = database.query(`SELECT * FROM message_${packet.d.message_id};`);
-				const userPromise = client.fetchUser(packet.d.user_id);
-				const messagePromise = client.channels.get(message_info.channel_id).fetchMessage(message_info.message_id);
-
-				Promise.all([databasePromise, userPromise, messagePromise]).then(values => {
-					const eventRoster = values[0];
-					const userObj = values[1];
-					const messageObj = values[2];
-
-					//Removes the added reaction.
-					messageObj.reactions.forEach(reaction => reaction.remove(packet.d.user_id));
-
-					switch (packet.d.emoji.name) {
-						case "✅": //Adds member to event roster.
-							if (eventRoster.length < message_info.capacity && eventRoster.reduce((memberObj, member) => member.user_id === packet.d.user_id ? member : memberObj, null) === null) {
-								database.query(`INSERT INTO message_${message_info.message_id} (user_id, username) VALUES ('${userObj.id}','${userObj.username}');`);
-
-								//Converts event roster to string.
-								var rosterString = eventRoster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
-								rosterString += `> *${userObj.username}*\n`;
-
-								//Updates message.
-								messageObj.edit(`> **Event Name:**  *${message_info.message_name}*\n` +
-										`> **Event Time:**  *${message_info.message_time}*\n` +
-										`> **Capacity:** *${eventRoster.length + 1}/${message_info.capacity}*\n` +
-										`> \n${rosterString}` +
-										`> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`);
-							}
-						break;
-					case "❌": //Removes member from event roster.
-						var indexDelete;
-						if ((indexDlete = eventRoster.reduce((memberIndex, member, index) => member.user_id === packet.d.user_id ? index : memberIndex, null)) !== null) {
-							//Deletes record from message table.
-							database.query(`DELETE FROM message_${message_info.message_id} WHERE user_id = '${userObj.id}'`);
-
-							//Removes user object from array.
-							eventRoster.splice(indexDelete, 1);
-
-							//Converts event roster to string.
-							var rosterString = eventRoster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
-
-							//Updates message.
-							messageObj.edit(`> **Event Name:**  *${message_info.message_name}*\n` +
-										`> **Event Time:**  *${message_info.message_time}*\n` +
-										`> **Capacity:** *${eventRoster.length + 1}/${message_info.capacity}*\n` +
-										`> \n${rosterString}` +
-										`> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`);
-						}
-						break;
-					case "🚫": //Removes event. Checks for permissions.
-						//User can manage messages.
-						if (messageObj.channel.permissionsFor(userObj).has("MANAGE_MESSAGES", false)) {
-							database.query(`DROP TABLE message_${message_info.message_id}`);
-							database.query(`DELETE FROM messages WHERE message_id = ${message_info.message_id}`);
-							messageObj.delete()
-							.then(msg => console.log(`${message_info.message_id}: Event deleted.`));
-						}
-						break;
-				} //End switch statement.
-			});
-		}
-		})
-		.catch(console.error);
+		handler.onReaction(packet);
 	}
 });
-
-/*
-client.on("raw", async packet => {
-	if (packet.t === "MESSAGE_REACTION_ADD" && packet.d.user_id !== auth.user_id) {
-		try {
-
-				let message_info, message_roster, user_infom, eventRoster;
-				database.query(`SELECT * FROM messages where message_id = '${packet.d.message_id}';`)
-				.then((message_record) => {
-					if (message_record.length !== 0) {
-						message_info = message_record[0];
-						return packet.d.emoji.name;
-					}
-					return new Error(`${packet.d.message_id}: Message not recorded.`)
-				})
-				.then((emoji) => {
-					switch (emoji) {
-						case "✅":
-						console.log(message_info);
-							database.query(`SELECT * FROM message_${message_info.message_id}`)
-							.then(rows => {
-								eventRoster = rows;
-								if (eventRoster.length < message_info.capacity) {
-									let rosterMember = eventRoster.reduce((memberObj, member) => member.user_id === packet.d.user_id ? member : memberObj, null);
-									if (rosterMember === null) {
-										message_roster = eventRoster;
-										return client.fetchUser(packet.d.user_id);
-									}
-								}
-								throw new Error(`${packet.d.message_id}: Failed to add new member to roster.`);
-							})
-							.then(user => {
-								user_info = {id: user.id, username: user.username};
-								return database.query(`INSERT INTO message_${message_info.message_id} (user_id, username) VALUES ('${user.id}','${user.username}');`);
-							})
-							.then(result => {
-								return client.channels.get(message_info.channel_id).fetchMessage(message_info.message_id);
-							})
-							.then(msg => {
-								msg.reactions.forEach(reaction => reaction.remove(packet.d.user_id));
-								var rosterString = message_roster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
-								rosterString += `> *${user_info.username}*\n`;
-
-								msg.edit(`> **Event Name:**  *${message_info.message_name}*\n` +
-										`> **Event Time:**  *${message_info.message_time}*\n` +
-										`> **Capacity:** *${eventRoster.length + 1}/${message_info.capacity}*\n` +
-										`> \n${rosterString}` +
-										`> \n> *Please be gentle with me. I am hosted on a potato.*\n> *React with :white_check_mark: to join.*`);
-							})
-							.catch();
-						break;
-					}
-				})
-				.catch();
-
-		}
-		catch (error) {
-		}
-		
-	}
-});
-*/
