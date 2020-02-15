@@ -1,7 +1,7 @@
 {
 	"token": "OIjasiodjOIQDOijdoijadio.dOIASJ.djqoidjQOIDJQOIDJOIQJDWIOJa"
-	"user_id": "112312312312312311",
 	"db_host": "10.100.100.2000",
 	"db_user": "root",
-	"db_pw": "thisispassword"
+	"db_pw": "thisispassword",
+	"db_name": "botDB"
 }

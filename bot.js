@@ -50,7 +50,7 @@ client.on('ready', () => {
 
 client.on("raw", async packet => {
 	//Don't run on unrelated packets.
-	if (["MESSAGE_REACTION_ADD", "MESSAGE_CREATE"].includes(packet.t) && packet.d.user_id !== auth.user_id) {
+	if (["MESSAGE_REACTION_ADD", "MESSAGE_CREATE"].includes(packet.t) && packet.d.user_id !== client.user.id) {
 		switch(packet.t) {
 			case "MESSAGE_REACTION_ADD":
 				handler.onReaction(packet);
