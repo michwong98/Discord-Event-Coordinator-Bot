@@ -2,17 +2,16 @@ const Discord = require("discord.js");
 const auth = require("./auth.json");
 const mysql = require("mysql")
 const Handler = require("./handler.js");
-
-var client = new Discord.Client();
-
+const readline = require("readline");
+const clear = require("clear");
 //Wrapper class for MySQL client.
 class Database {
 
-	constructor(auth) {
+	constructor(auth, password) {
 		 this.connection = mysql.createConnection({
 			host: auth.db_host,
 			user: auth.db_user,
-			password: auth.db_pw,
+			password: password,
 			database: auth.db_name
 		});
 
@@ -40,28 +39,51 @@ class Database {
 	}
 }
 
-const database = new Database(auth);
+var client;
 
-const handler = new Handler(database, client);
-
-client.on('ready', () => {
-	console.log(`Logged in as ${client.user.tag}!`);
+new Promise(function(resolve, reject) {
+	const r1 = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout
 	});
 
-client.on("raw", async packet => {
-	//Don't run on unrelated packets.
-	if (["MESSAGE_REACTION_ADD", "MESSAGE_CREATE"].includes(packet.t) && packet.d.user_id !== client.user.id) {
-		switch(packet.t) {
-			case "MESSAGE_REACTION_ADD":
-				handler.onReaction(packet);
-				break;
-			case "MESSAGE_CREATE":
-				if (packet.d.content.substring(0, 2) === "e!") {
-					handler.onCommand(packet);
-				}
-				break;
-			default:
-				break;
+	r1.question("Enter Database Password:", answer => {
+		r1.close();
+		clear();
+		resolve(answer);
+	});
+})
+.then(password => {
+
+
+	client = new Discord.Client();
+
+	client.on('ready', () => {
+		console.log(`Logged in as ${client.user.tag}!`);
+		});
+
+	client.on("raw", async packet => {
+		//Don't run on unrelated packets.
+		if (["MESSAGE_REACTION_ADD", "MESSAGE_CREATE"].includes(packet.t) && packet.d.user_id !== client.user.id) {
+			switch(packet.t) {
+				case "MESSAGE_REACTION_ADD":
+					handler.onReaction(packet);
+					break;
+				case "MESSAGE_CREATE":
+					if (packet.d.content.substring(0, 2) === "e!") {
+						handler.onCommand(packet);
+					}
+					break;
+				default:
+					break;
+			}
 		}
-	}
-});
+	});
+
+	const database = new Database(auth, password);
+
+	const handler = new Handler(database, client);
+
+})
+.catch(console.error);
+

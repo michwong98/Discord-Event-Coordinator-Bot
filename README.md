@@ -18,9 +18,7 @@ On the right hand side, select *OAuth2*. Select *bot* under *Scopes*. Select *Se
 
 In your computer's "Command Prompt", navigate to the folder containing the [bot.js](bot.js) file. Perform the following commands to install dependencies.
 ```
-npm install require
-npm install mysql
-npm install discord.js
+npm install require mysql discord.js readline clear
 ```
 
 Create a new file named auth.json. See [auth-sample](auth-sample.txt) for an exmaple. Set the "token" field to the value of your bot's token from earlier. "db_host" is the address for the SQL database server. "db_user" is the role within the database. "db_pw" is the password used to connect to the SQL database server. "db_name" is the name of the database the bot will use.
@@ -30,7 +28,6 @@ Another example:
 	"token": "Noijw82nfiaoIJOIdaj82jdOIjd82afj.fja9fj(9jajf29fjaf0asdif-g",
 	"db_host": "127.0.0.1",
 	"db_user": "root",
-	"db_pw": "password",
 	"db_name": "discordbotMessagesDB"
 }
 ```
