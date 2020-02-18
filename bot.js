@@ -7,28 +7,33 @@ const clear = require("clear");
 //Wrapper class for MySQL client.
 class Database {
 
-	constructor(auth, password) {
-		 this.connection = mysql.createConnection({
-			host: auth.db_host,
-			user: auth.db_user,
-			password: password,
-			database: auth.db_name,
-			autoReconnect: true,
-			maxReconnects: 10
-		});
+	constructor(config, token) {
+		this.config = config;
+		this.handleDisconnect(); //Connects to database.
+		client.login(token)
+		.catch(error => console.error);	
+	} //End constructor.
 
-		//Database connect.
+	handleDisconnect() {
+		this.connection = mysql.createConnection(this.config);
 		this.connection.connect(function (error) {
 			if (error) {
+				console.log("Error connecting to database: ", error);
+				setTimeout(this.handleDisconnect, 10000) //Attempts reconnect after 10 seconds.
+			}
+			console.log("Database connection.");
+		}.bind(this));
+		this.connection.on("error", function (error) {
+			if (!error.fatal) { //Not fatal error.
+				return;
+			}
+			if (error.code === "PROTOCOL_CONNECTION_LOST") { //Connection to database lost.
+				this.handleDisconnect(); //Attempts to reconnect.
+			} else {
 				throw error;
 			}
-			console.log("Database connected.");
-
-			//Discord Bot Client connect.
-			client.login(auth.token)
-			.catch(console.error);
-		});
-	} //End constructor.
+		}.bind(this));
+	}
 
 	//Query function.
 	query(sql, args) {
@@ -41,7 +46,7 @@ class Database {
 	}
 }
 
-var client;
+var client, databaseConfig;
 
 //Prompts input for database password.
 new Promise(function(resolve, reject) { 
@@ -58,7 +63,14 @@ new Promise(function(resolve, reject) {
 })
 .then(password => {
 
-
+	databaseConfig = {
+		host: auth.db_host,
+		user: auth.db_user,
+		password: password,
+		database: auth.db_name,
+		autoReconnect: true,
+		maxReconnects: 10
+	};
 	client = new Discord.Client({autoReconnect: true});
 
 	client.on("ready", () => {
@@ -87,7 +99,7 @@ new Promise(function(resolve, reject) {
 		console.log(`${client.user.tag} reconnecting.`);
 	});
 
-	const database = new Database(auth, password);
+	const database = new Database(databaseConfig, auth.token);
 
 	const handler = new Handler(database, client);
 
