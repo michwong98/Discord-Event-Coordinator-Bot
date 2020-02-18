@@ -12,7 +12,9 @@ class Database {
 			host: auth.db_host,
 			user: auth.db_user,
 			password: password,
-			database: auth.db_name
+			database: auth.db_name,
+			autoReconnect: true,
+			maxReconnects: 10
 		});
 
 		//Database connect.
@@ -41,7 +43,8 @@ class Database {
 
 var client;
 
-new Promise(function(resolve, reject) {
+//Prompts input for database password.
+new Promise(function(resolve, reject) { 
 	const r1 = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout
@@ -56,9 +59,9 @@ new Promise(function(resolve, reject) {
 .then(password => {
 
 
-	client = new Discord.Client();
+	client = new Discord.Client({autoReconnect: true});
 
-	client.on('ready', () => {
+	client.on("ready", () => {
 		console.log(`Logged in as ${client.user.tag}!`);
 		});
 
@@ -78,6 +81,10 @@ new Promise(function(resolve, reject) {
 					break;
 			}
 		}
+	});
+
+	client.on("reconnecting", () => {
+		console.log(`${client.user.tag} reconnecting.`);
 	});
 
 	const database = new Database(auth, password);

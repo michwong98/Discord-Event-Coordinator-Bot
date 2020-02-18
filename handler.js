@@ -1,4 +1,5 @@
 //TODO: CHECK MESSAGE CACHE BEFORE FETCH.
+const Discord = require("discord.js");
 
 class Handler {
 
@@ -50,39 +51,45 @@ class Handler {
 		.catch(console.error);
 	} //End onReaction function.
 
-	async onCommand(packet) {
-		let command = packet.d.content.substring(2).split(" ");
-		//Validate command isn't an empty string.
-		if (command.length === 0 || (command = command[0].trim().toLowerCase()) === "") {
-			return;
-		}
-		switch (command) {
-			case "info":
-			case "help":
-				this.commandHelp(packet); //Displays help info.
-				break;
-			case "newevent":
-				this.commandNew(packet); //Create new event message.
-				break;
-		}
-
-	}
-
 	addMember(args) {
-		if (args.eventRoster.length < args.message_info.capacity && args.eventRoster.reduce((memberObj, member) => member.user_id === args.packet.d.user_id ? member : memberObj, null) === null) {
+		if (args.eventRoster.length < args.message_info.message_capacity && args.eventRoster.reduce((memberObj, member) => member.user_id === args.packet.d.user_id ? member : memberObj, null) === null) {
 			//Creates record of user.
 			this.database.query(`INSERT INTO message_${args.message_info.message_id} (user_id, username) VALUES ('${args.userObj.id}','${args.userObj.username}');`);
 
-			//Converts event roster to string.
-			let rosterString = args.eventRoster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
-			rosterString += `> *${args.userObj.username}*\n`;
+			if (args.message_info.rich) {
+				//Reduce to array.
+				let eventRoster = [];
+				args.eventRoster.forEach(member => {
+					eventRoster.push(member.userName);
+				});
+				eventRoster.push(args.userObj.username);
 
-			//Updates message.
-			args.messageObj.edit(`@here \n> **Event Name:**  *${args.message_info.message_name}*\n` +
-					`> **Event Time:**  *${args.message_info.message_time}*\n` +
-					`> **Capacity:** *${args.eventRoster.length + 1}/${args.message_info.capacity}*\n` +
-					`> \n${rosterString}` +
-					`> \n> *React with :white_check_mark: to join.*`);
+				//Args for the Rich Embed object.
+				const embedArgs = {
+					title: args.message_info.message_name,
+					author: args.message_info.message_author,
+					description: args.message_info.message_description,
+					time: args.message_info.message_time,
+					capacity: args.message_info.message_capacity,
+					members: eventRoster
+				}
+				//embedArgs => embedObj.
+				const embedObj = this.getRichEmbedObj(embedArgs);
+
+				//Edits rich embed message.
+				args.messageObj.edit(new Discord.RichEmbed(embedObj));
+			} else {
+				//Converts event roster to string.
+				let rosterString = args.eventRoster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
+				rosterString += `> *${args.userObj.username}*\n`;
+
+				//Updates message.
+				args.messageObj.edit(`@here \n> **Event Name:**  *${args.message_info.message_name}*\n` +
+						`> **Event Time:**  *${args.message_info.message_time}*\n` +
+						`> **Capacity:** *${args.eventRoster.length + 1}/${args.message_info.message_capacity}*\n` +
+						`> \n${rosterString}` +
+						`> \n> *React with :white_check_mark: to join.*`);
+			}
 		} //End if.
 	} //End addMember function.
 
@@ -94,16 +101,38 @@ class Handler {
 
 			//Removes user object from array.
 			args.eventRoster.splice(indexDelete, 1);
+			if (args.message_info.rich) {
+				//Converts args.eventRoster to array of usernames.
+				let eventRoster = [];
+				args.eventRoster.forEach(member => {
+					eventRoster.push(member.username);
+				});
 
-			//Converts event roster to string.
-			const rosterString = args.eventRoster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
+				//Args for the Rich Embed object.
+				const embedArgs = {
+					title: args.message_info.message_name,
+					author: args.message_info.message_author,
+					description: args.message_info.message_description,
+					time: args.message_info.message_time,
+					capacity: args.message_info.message_capacity,
+					members: eventRoster
+				}
+				//embedArgs => embedObj.
+				const embedObj = this.getRichEmbedObj(embedArgs);
 
-			//Updates message.
-			args.messageObj.edit(`> **Event Name:**  *${args.message_info.message_name}*\n` +
-						`> **Event Time:**  *${args.message_info.message_time}*\n` +
-						`> **Capacity:** *${args.eventRoster.length}/${args.message_info.capacity}*\n` +
-						`> \n${rosterString}` +
-						`> \n> *React with :white_check_mark: to join.*`);
+				//Edits rich embed message.
+				args.messageObj.edit(new Discord.RichEmbed(embedObj));
+			} else {
+				//Converts event roster to string.
+				const rosterString = args.eventRoster.reduce((rosterString, member) =>  rosterString + `> *${member.username}*\n`, "");
+
+				//Updates message.
+				args.messageObj.edit(`@here \n> **Event Name:**  *${args.message_info.message_name}*\n` +
+							`> **Event Time:**  *${args.message_info.message_time}*\n` +
+							`> **Capacity:** *${args.eventRoster.length}/${args.message_info.message_capacity}*\n` +
+							`> \n${rosterString}` +
+							`> \n> *React with :white_check_mark: to join.*`);
+			}
 		} //End if.
 	} //End removeMember function.
 	
@@ -118,8 +147,29 @@ class Handler {
 		}
 	} //End deleteEvent function.
 
+	async onCommand(packet) {
+		let command = packet.d.content.substring(2).split(" ");
+		//Validate command isn't an empty string.
+		if (command.length === 0 || (command = command[0].trim().toLowerCase()) === "") {
+			return;
+		}
+		switch (command) {
+			case "info":
+			case "help":
+				this.commandHelp(packet); //Displays help info.
+				break;
+			case "newevent":
+				this.commandNew(packet); //Create new event message.
+				break;
+			case "richevent":
+				this.commandRich(packet);
+				break;
+		}
+
+	}
+
 	async commandNew(packet) { //Create new event.
-		var args = packet.d.content.substring(2).split(",");
+		let args = packet.d.content.substring(11).split(",");
 		//Parse args.
 		args = this.getArgsNewEvent(...args);
 
@@ -137,10 +187,10 @@ class Handler {
 		this.database.query(`CREATE TABLE message_${newMessage.id} (user_id VARCHAR(20) NOT NULL PRIMARY KEY, username TINYTEXT NOT NULL);`)
 		.then(() => {
 			//Create record for event message info.
-			return this.database.query(`INSERT INTO messages (channel_id, message_id, message_name, message_time, capacity) VALUES ('${channel.id}', '${newMessage.id}', '${args[0]}', '${args[1]}', '${args[2]}');`);
+			return this.database.query(`INSERT INTO messages (channel_id, message_id, rich, message_name, message_time, message_capacity) VALUES ('${channel.id}', '${newMessage.id}', '0', '${args[0]}', '${args[1]}', '${args[2]}');`);
 		})
 		.then(() => {
-			console.log(`${newMessage.id}: New Eevent Created, "${args[0]}"`);
+			console.log(`${newMessage.id}: New Event Created, "${args[0]}"`);
 		})
 		.catch(console.error);
 		return;
@@ -151,7 +201,94 @@ class Handler {
 		time = time.trim() === "" ? "No Time Given" : time.trim();
 		capacity = /^\d+$/.test(capacity.trim()) ? capacity.trim() : 10;
 		return [name, time, capacity];
-	} //end getArgsNewEvent.
+	} //end getArgsNewEvent function.
+
+	async commandRich(packet) {
+
+		let args = packet.d.content.substring(12).split(",");
+
+		args = this.getArgsRichEvent(...args);
+
+		const channel = this.client.channels.get(packet.d.channel_id);
+
+		const embArgs = {
+			title: args[0],
+			author: packet.d.author.username,
+			description: args[3],
+			time: args[1],
+			capacity: args[2],
+			members: []
+		}
+
+		const embedObj = this.getRichEmbedObj(embArgs);
+
+		const newMessage = await channel.send(new Discord.RichEmbed(embedObj));
+		newMessage.pin();
+		await newMessage.react("✅"); await newMessage.react("❌"); await newMessage.react("🚫");
+
+		//Deletes command message.
+		channel.fetchMessage(packet.d.id).then(message => message.delete());
+
+		//Create table for new event.
+		this.database.query(`CREATE TABLE message_${newMessage.id} (user_id VARCHAR(20) NOT NULL PRIMARY KEY, username TINYTEXT NOT NULL);`)
+		.then(() => {
+			//Create record for event message info.
+			return this.database.query(`INSERT INTO messages (channel_id, message_id, rich, message_name, message_time, message_capacity, message_description, message_author) VALUES ('${channel.id}', '${newMessage.id}', '1', '${args[0]}', '${args[1]}', '${args[2]}', '${args[3]}', '${packet.d.author.username}');`);
+		})
+		.then(() => {
+			console.log(`${newMessage.id}: New Rich Event Created, "${args[0]}"`);
+		})
+		.catch(console.error);
+		return;
+	} //end commandRich function.
+
+	getArgsRichEvent(name = "No Name Given", time = "No Time Given", capacity = "10", ...descriptionArray) {
+		let description = "" + descriptionArray.join(",");
+		name = name.trim() === "" ? "No Name Given" : name.trim();
+		time = time.trim() === "" ? "No Time Given" : time.trim();
+		capacity = /^\d+$/.test(capacity.trim()) ? capacity.trim() : 10;
+		return [name, time, capacity, description];
+	}
+
+	getRichEmbedObj(args) {
+
+		const embedObj = {
+
+			color: 0x0099ff,
+			title: args.title,
+			author: {
+				name: "Host: " + args.author
+			},
+			description: args.description,
+			fields: [
+				{
+					name: "Time",
+					value: args.time,
+					inline: true
+				},
+				{
+					name: "Capacity",
+					value: args.capacity,
+					inline: true
+				},
+				{
+					name: "Members",
+					value: "*empty*"
+				}
+			],
+			timestamp: new Date()
+
+		} //End embedObj.
+		if (args.members.length > 0) {
+			embedObj.fields[2].value = "";
+			args.members.forEach(member => {
+				embedObj.fields[2].value += `${member}\n`;
+			});
+		}
+
+		return embedObj;
+
+	}
 
 	async commandHelp(packet) {
 		this.client.channels.get(packet.d.channel_id).send(
@@ -163,6 +300,8 @@ class Handler {
 			);
 		return;
 	} //End commandHelp function.
+
+
 
 }
 
