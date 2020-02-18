@@ -60,7 +60,7 @@ class Handler {
 				//Reduce to array.
 				let eventRoster = [];
 				args.eventRoster.forEach(member => {
-					eventRoster.push(member.userName);
+					eventRoster.push(member.username);
 				});
 				eventRoster.push(args.userObj.username);
 
