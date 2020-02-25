@@ -17,11 +17,12 @@ class Database {
 	handleDisconnect() {
 		this.connection = mysql.createConnection(this.config);
 		this.connection.connect(function (error) {
+			console.log("Connecting to database.")
 			if (error) {
 				console.log("Error connecting to database: ", error);
 				setTimeout(this.handleDisconnect, 10000) //Attempts reconnect after 10 seconds.
 			}
-			console.log("Database connection.");
+			console.log("Database connected.");
 		}.bind(this));
 		this.connection.on("error", function (error) {
 			if (!error.fatal) { //Not fatal error.
@@ -56,13 +57,12 @@ new Promise(function(resolve, reject) {
 	});
 
 	r1.question("Enter Database Password:", answer => {
+		console.clear();
 		r1.close();
-		clear();
 		resolve(answer);
 	});
 })
 .then(password => {
-
 	databaseConfig = {
 		host: auth.db_host,
 		user: auth.db_user,
@@ -82,7 +82,17 @@ new Promise(function(resolve, reject) {
 		if (["MESSAGE_REACTION_ADD", "MESSAGE_CREATE"].includes(packet.t) && packet.d.user_id !== client.user.id) {
 			switch(packet.t) {
 				case "MESSAGE_REACTION_ADD":
-					handler.onReaction(packet);
+					const channel = client.channels.get(packet.d.channel_id);
+					if (channel.messages.has(packet.d.message_id)) { //Message exists in cache.
+						const messageObj = channel.messages.get(packet.d.message_id);
+						if (messageObj.author.id === client.user.id) {
+							handler.onReaction(packet); //Handler.
+						}
+					} else {
+						channel.fetchMessage(packet.d.message_id).then(message => { //Message does not exist in cache. Fetches message object.
+							if (message.author.id === client.user.id) handler.onReaction(packet); //Handler.
+						});
+					}
 					break;
 				case "MESSAGE_CREATE":
 					if (packet.d.content.substring(0, 2) === "e!") {

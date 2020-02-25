@@ -57,11 +57,8 @@ class Handler {
 			this.database.query(`INSERT INTO message_${args.message_info.message_id} (user_id, username) VALUES ('${args.userObj.id}','${args.userObj.username}');`);
 
 			if (args.message_info.rich) {
-				//Reduce to array.
-				let eventRoster = [];
-				args.eventRoster.forEach(member => {
-					eventRoster.push(member.username);
-				});
+				//Map to array.
+				let eventRoster = args.eventRoster.map(member => member.username);
 				eventRoster.push(args.userObj.username);
 
 				//Args for the Rich Embed object.
@@ -103,10 +100,7 @@ class Handler {
 			args.eventRoster.splice(indexDelete, 1);
 			if (args.message_info.rich) {
 				//Converts args.eventRoster to array of usernames.
-				let eventRoster = [];
-				args.eventRoster.forEach(member => {
-					eventRoster.push(member.username);
-				});
+				let eventRoster = args.eventRoster.map(member => member.username);
 
 				//Args for the Rich Embed object.
 				const embedArgs = {
@@ -158,20 +152,20 @@ class Handler {
 			case "help":
 				this.commandHelp(packet); //Displays help info.
 				break;
-			case "newevent":
-				this.commandNew(packet); //Create new event message.
+			case "quickevent":
+				this.commandQuick(packet); //Create new event message.
 				break;
-			case "richevent":
-				this.commandRich(packet);
+			case "newevent":
+				this.commandNew(packet);
 				break;
 		}
 
 	}
 
-	async commandNew(packet) { //Create new event.
-		let args = packet.d.content.substring(11).split(",");
+	async commandQuick(packet) { //Create new event.
+		let args = packet.d.content.substring(13).split(",");
 		//Parse args.
-		args = this.getArgsNewEvent(...args);
+		args = this.getArgsQuickEvent(...args);
 
 		const channel = this.client.channels.get(packet.d.channel_id);
 
@@ -194,20 +188,20 @@ class Handler {
 		})
 		.catch(console.error);
 		return;
-	} //End commandNew function.
+	} //End commandQuick function.
 
-	getArgsNewEvent(name = "No Name Given", time = "No Time Given", capacity = "10") {
+	getArgsQuickEvent(name = "No Name Given", time = "No Time Given", capacity = "10") {
 		name = name.trim() === "" ? "No Name Given" : name.trim();
 		time = time.trim() === "" ? "No Time Given" : time.trim();
 		capacity = /^\d+$/.test(capacity.trim()) ? capacity.trim() : 10;
 		return [name, time, capacity];
-	} //end getArgsNewEvent function.
+	} //end getArgsQuickEvent function.
 
-	async commandRich(packet) {
+	async commandNew(packet) {
 
-		let args = packet.d.content.substring(12).split(",");
+		let args = packet.d.content.substring(11).split(",");
 
-		args = this.getArgsRichEvent(...args);
+		args = this.getArgsNewEvent(...args);
 
 		const channel = this.client.channels.get(packet.d.channel_id);
 
@@ -242,7 +236,7 @@ class Handler {
 		return;
 	} //end commandRich function.
 
-	getArgsRichEvent(name = "No Name Given", time = "No Time Given", capacity = "10", ...descriptionArray) {
+	getArgsNewEvent(name = "No Name Given", time = "No Time Given", capacity = "10", ...descriptionArray) {
 		let description = "" + descriptionArray.join(",");
 		name = name.trim() === "" ? "No Name Given" : name.trim();
 		time = time.trim() === "" ? "No Time Given" : time.trim();
@@ -291,13 +285,34 @@ class Handler {
 	}
 
 	async commandHelp(packet) {
-		this.client.channels.get(packet.d.channel_id).send(
-			"Use **NewEvent** to schedule a new event!\n"
-			+ "```e!newevent [Event Name (default: No Name Given)], [Event Time (default: No Time Given)], [Maximum Capacity (default: 10)]\n"
-			+ "Example: \ne!newevent Example Gathering, Friday 16:00, 15```\n"
-			+ "Users react with :white_check_mark: and :x: to join and leave events.\n"
-			+ ":no_entry_sign: deletes the event (permissions required)."
-			);
+
+		const arg = packet.d.content.substring(7).trim().toLowerCase();
+
+		switch (arg) {
+			case "newevent":
+				this.client.channels.get(packet.d.channel_id).send(
+					"**Command**: ```e!NewEvent [Event Name], [Event Time], [Event Capacity], [Description]```\n"
+					+ "Sends a rich embed message with inputted event details.\nReact with ✅ to join the event.\nReact with ❌ to leave the event.\n"
+					+ "React with 🚫 to delete the event (requires permissions to manage messages)."
+					);
+				break;
+			case "quickevent":
+				this.client.channels.get(packet.d.channel_id).send(
+					"**Command**: ```e!QuickEvent [Event Name], [Event Time], [Event Capacity]```\n"
+					+ "Sends a message with inputted event details.\nReact with ✅ to join the event.\nReact with ❌ to leave the event.\n"
+					+ "React with 🚫 to delete the event (requires permissions to manage messages)."
+					);
+				break;
+			default:
+				this.client.channels.get(packet.d.channel_id).send("Use **e!help [command]** or **e!info [command]** to see more details.\n\n"
+					+ "*List of commands*:\n"
+					+ "```\n"
+					+ "NewEvent\n" + "QuickEvent\n"
+					+ "```"
+					);
+				break;
+		}
+
 		return;
 	} //End commandHelp function.
 
