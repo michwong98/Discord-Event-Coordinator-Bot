@@ -191,8 +191,8 @@ class Handler {
 	} //End commandQuick function.
 
 	getArgsQuickEvent(name = "No Name Given", time = "No Time Given", capacity = "10") {
-		name = name.trim() === "" ? "No Name Given" : name.trim();
-		time = time.trim() === "" ? "No Time Given" : time.trim();
+		name = name.trim().replace("'", "") === "" ? "No Name Given" : name.trim().replace("'", "");
+		time = time.trim().replace("'", "") === "" ? "No Time Given" : time.trim().replace("'", "");
 		capacity = /^\d+$/.test(capacity.trim()) ? capacity.trim() : 10;
 		return [name, time, capacity];
 	} //end getArgsQuickEvent function.
@@ -237,9 +237,9 @@ class Handler {
 	} //end commandRich function.
 
 	getArgsNewEvent(name = "No Name Given", time = "No Time Given", capacity = "10", ...descriptionArray) {
-		let description = "" + descriptionArray.join(",");
-		name = name.trim() === "" ? "No Name Given" : name.trim();
-		time = time.trim() === "" ? "No Time Given" : time.trim();
+		let description = ("" + descriptionArray.join(",")).replace("'", "");
+		name = name.trim().replace("'", "") === "" ? "No Name Given" : name.trim().replace("'", "");
+		time = time.trim().replace("'", "") === "" ? "No Time Given" : time.trim().replace("'", "");
 		capacity = /^\d+$/.test(capacity.trim()) ? capacity.trim() : 10;
 		return [name, time, capacity, description];
 	}
@@ -285,7 +285,6 @@ class Handler {
 	}
 
 	async commandHelp(packet) {
-
 		const arg = packet.d.content.substring(7).trim().toLowerCase();
 
 		switch (arg) {
