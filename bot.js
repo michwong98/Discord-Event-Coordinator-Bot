@@ -2,9 +2,11 @@ const Discord = require("discord.js");
 const auth = require("./auth.json");
 const mysql = require("mysql")
 const Handler = require("./handler.js");
-const readline = require("readline");
 const clear = require("clear");
 //Wrapper class for MySQL client.
+
+console.log(process.argv);
+
 class Database {
 
 	constructor(config, token) {
@@ -49,24 +51,14 @@ class Database {
 
 var client, databaseConfig;
 
-//Prompts input for database password.
-new Promise(function(resolve, reject) { 
-	const r1 = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout
-	});
+try {
 
-	r1.question("Enter Database Password:", answer => {
-		console.clear();
-		r1.close();
-		resolve(answer);
-	});
-})
-.then(password => {
+	clear();
+	
 	databaseConfig = {
 		host: auth.db_host,
 		user: auth.db_user,
-		password: password,
+		password: process.argv[2],
 		database: auth.db_name,
 		autoReconnect: true,
 		maxReconnects: 10
@@ -113,6 +105,6 @@ new Promise(function(resolve, reject) {
 
 	const handler = new Handler(database, client);
 
-})
-.catch(console.error);
-
+} catch (error) {
+	console.error(error);
+}

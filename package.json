@@ -5,8 +5,9 @@
   "main": "bot.js",
   "dependencies": {
     "dblapi.js": "^2.3.1",
-    "discord.js": "^11.5.1",
     "discord.io": "^2.5.3",
+    "discord.js": "^11.5.1",
+    "forever": "^2.0.0",
     "require": "^2.4.20",
     "winston": "^3.2.1"
   },

@@ -32,4 +32,4 @@ Another example:
 }
 ```
 
-Once the bot has been invited to a server and the auth.json file has been configured. Execute ```node bot.js``` in the "Command Prompt" window.
+Once the bot has been invited to a server and the auth.json file has been configured. Execute ```node bot.js DATABASEPASSWORD``` in the "Command Prompt" window.
