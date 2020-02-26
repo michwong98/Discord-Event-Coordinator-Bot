@@ -19,12 +19,12 @@ class Database {
 	handleDisconnect() {
 		this.connection = mysql.createConnection(this.config);
 		this.connection.connect(function (error) {
-			console.log("Connecting to database.")
+			console.log(new Data(), "Connecting to database.")
 			if (error) {
-				console.log("Error connecting to database: ", error);
+				console.log(new Data(), "Error connecting to database: ", error);
 				setTimeout(this.handleDisconnect, 10000) //Attempts reconnect after 10 seconds.
 			}
-			console.log("Database connected.");
+			console.log(new Data(), "Database connected.");
 		}.bind(this));
 		this.connection.on("error", function (error) {
 			if (!error.fatal) { //Not fatal error.
@@ -66,7 +66,7 @@ try {
 	client = new Discord.Client({autoReconnect: true});
 
 	client.on("ready", () => {
-		console.log(`Logged in as ${client.user.tag}!`);
+		console.log(new Data(), `Logged in as ${client.user.tag}!`);
 		});
 
 	client.on("raw", async packet => {
@@ -98,7 +98,7 @@ try {
 	});
 
 	client.on("reconnecting", () => {
-		console.log(`${client.user.tag} reconnecting.`);
+		console.log(new Data(), `${client.user.tag} reconnecting.`);
 	});
 
 	const database = new Database(databaseConfig, auth.token);
