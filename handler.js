@@ -1,13 +1,45 @@
 //TODO: CHECK MESSAGE CACHE BEFORE FETCH.
 const Discord = require("discord.js");
 
+Discord.TextChannel.prototype.getMessage = function(message_id) { //Message caching.
+	const channel = this;
+	return new Promise(function(resolve, reject) {
+		if (channel.messages.has(message_id)) { //Message exists in cache.
+			resolve(channel.messages.get(message_id));
+		} else {
+			channel.fetchMessage(message_id).then(message => {
+				resolve(message);
+			})//Message does not exist in cache. Fetches message object.;
+			.catch(error => {
+				reject(error);
+			});
+		}
+	});
+}
+
+Discord.Client.prototype.getUser = function(user_id) { //User caching.
+	const client = this;
+	return new Promise(function(resolve, reject) {
+		if (client.users.has(user_id)) {
+			resolve(client.users.get(user_id)); //User exists in cache.
+		} else {
+			client.fetchUser(user_id).then(user => {
+				resolve(user);
+			})
+			.catch(error => {
+				reject(error);
+			});
+		}
+	});
+}
+
 class Handler {
 
 	//Constructor.
 	constructor(database, client) {
 		this.database = database;
 		this.client = client;
-		console.log("Handler constructed.");
+		console.log(new Date(), "Handler constructed.");
 	}
 
 	async onReaction(packet) { //Reaction handler function.
@@ -17,8 +49,8 @@ class Handler {
 
 				//Promises.
 				const databasePromise = this.database.query(`SELECT * FROM message_${packet.d.message_id};`);
-				const userPromise = this.client.fetchUser(packet.d.user_id);
-				const messagePromise = this.client.channels.get(rows[0].channel_id).fetchMessage(rows[0].message_id);
+				const userPromise = this.client.getUser(packet.d.user_id);
+				const messagePromise = this.client.channels.get(rows[0].channel_id).getMessage(rows[0].message_id);
 
 				Promise.all([databasePromise, userPromise, messagePromise]).then(promiseValues => {
 					//Removes reactions.
@@ -136,7 +168,7 @@ class Handler {
 			this.database.query(`DROP TABLE message_${args.message_info.message_id}`);
 			this.database.query(`DELETE FROM messages WHERE message_id = ${args.message_info.message_id}`);
 			args.messageObj.delete()
-			.then(msg => console.log(`${args.message_info.message_id}: Event deleted.`))
+			.then(msg => console.log(new Date(), `${args.message_info.message_id}: Event deleted.`))
 			.catch(console.error);
 		}
 	} //End deleteEvent function.
@@ -175,7 +207,7 @@ class Handler {
 		await newMessage.react("✅"); await newMessage.react("❌"); await newMessage.react("🚫");
 
 		//Deletes command message.
-		channel.fetchMessage(packet.d.id).then(message => message.delete());
+		channel.getMessage(packet.d.id).then(message => message.delete());
 
 		//Create table for new event.
 		this.database.query(`CREATE TABLE message_${newMessage.id} (user_id VARCHAR(20) NOT NULL PRIMARY KEY, username TINYTEXT NOT NULL);`)
@@ -184,7 +216,7 @@ class Handler {
 			return this.database.query(`INSERT INTO messages (channel_id, message_id, rich, message_name, message_time, message_capacity) VALUES ('${channel.id}', '${newMessage.id}', '0', '${args[0]}', '${args[1]}', '${args[2]}');`);
 		})
 		.then(() => {
-			console.log(`${newMessage.id}: New Event Created, "${args[0]}"`);
+			console.log(new Date(), `${newMessage.id}: New Event Created, "${args[0]}"`);
 		})
 		.catch(console.error);
 		return;
@@ -221,7 +253,7 @@ class Handler {
 		await newMessage.react("✅"); await newMessage.react("❌"); await newMessage.react("🚫");
 
 		//Deletes command message.
-		channel.fetchMessage(packet.d.id).then(message => message.delete());
+		channel.getMessage(packet.d.id).then(message => message.delete());
 
 		//Create table for new event.
 		this.database.query(`CREATE TABLE message_${newMessage.id} (user_id VARCHAR(20) NOT NULL PRIMARY KEY, username TINYTEXT NOT NULL);`)
@@ -230,7 +262,7 @@ class Handler {
 			return this.database.query(`INSERT INTO messages (channel_id, message_id, rich, message_name, message_time, message_capacity, message_description, message_author) VALUES ('${channel.id}', '${newMessage.id}', '1', '${args[0]}', '${args[1]}', '${args[2]}', '${args[3]}', '${packet.d.author.username}');`);
 		})
 		.then(() => {
-			console.log(`${newMessage.id}: New Rich Event Created, "${args[0]}"`);
+			console.log(new Date(), `${newMessage.id}: New Rich Event Created, "${args[0]}"`);
 		})
 		.catch(console.error);
 		return;
@@ -320,3 +352,4 @@ class Handler {
 }
 
 module.exports = Handler;
+module.exports.Discord = Discord;

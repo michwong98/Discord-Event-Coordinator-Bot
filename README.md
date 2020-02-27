@@ -2,7 +2,7 @@
 
 ## Setup
 
-The bot requires [Node.js](https://nodejs.org/) to run. Node.js is a free and open source JavaScript runtime. The package manager npm is used to install dependencies. Install both before continuing. To utilize the bot, a [Discord account](https://discordapp.com/). Log in to your account or create a new one. Additionally, the bot requires a SQL server to store message info.
+The bot requires [Node.js](https://nodejs.org/) to run. Node.js is a free and open source JavaScript runtime. The package manager npm is used to install dependencies. Install both before continuing. To utilize the bot, a [Discord account](https://discordapp.com/). Log in to your account or create a new one. Additionally, the bot requires a MySQL server to store message info.
 
 Once signed in, [create an applcation on Discord](https://discordapp.com/developers/applications/me). Select *New Application*. After inputting a name, on the right hand side, select *Bot*. Click *Add Bot*.
 
@@ -21,7 +21,7 @@ In your computer's "Command Prompt", navigate to the folder containing the [bot.
 npm install --all
 ```
 
-Create a new file named auth.json. See [auth-sample](auth-sample.txt) for an exmaple. Set the "token" field to the value of your bot's token from earlier. "db_host" is the address for the SQL database server. "db_user" is the role within the database. "db_pw" is the password used to connect to the SQL database server. "db_name" is the name of the database the bot will use.
+Create a new file named auth.json. See [auth-sample](auth-sample.txt) for an exmaple. Set the "token" field to the value of your bot's token from earlier. "db_host" is the address for the MySQL database server. "db_user" is the role within the database. "db_pw" is the password used to connect to the MySQL database server. "db_name" is the name of the database the bot will use.
 Another example:
 ```javascript
 {

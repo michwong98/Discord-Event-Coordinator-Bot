@@ -1,12 +1,10 @@
-const Discord = require("discord.js");
+const Handler = require("./handler.js");
+const Discord = Handler.Discord;
 const auth = require("./auth.json");
 const mysql = require("mysql")
-const Handler = require("./handler.js");
 const clear = require("clear");
+
 //Wrapper class for MySQL client.
-
-console.log(process.argv);
-
 class Database {
 
 	constructor(config, token) {
@@ -53,7 +51,7 @@ var client, databaseConfig;
 
 try {
 
-	clear();
+	//clear();
 	
 	databaseConfig = {
 		host: auth.db_host,
@@ -75,16 +73,11 @@ try {
 			switch(packet.t) {
 				case "MESSAGE_REACTION_ADD":
 					const channel = client.channels.get(packet.d.channel_id);
-					if (channel.messages.has(packet.d.message_id)) { //Message exists in cache.
-						const messageObj = channel.messages.get(packet.d.message_id);
+					channel.getMessage(packet.d.message_id).then(messageObj => {
 						if (messageObj.author.id === client.user.id) {
-							handler.onReaction(packet); //Handler.
+							handler.onReaction(packet);
 						}
-					} else {
-						channel.fetchMessage(packet.d.message_id).then(message => { //Message does not exist in cache. Fetches message object.
-							if (message.author.id === client.user.id) handler.onReaction(packet); //Handler.
-						});
-					}
+					});
 					break;
 				case "MESSAGE_CREATE":
 					if (packet.d.content.substring(0, 2) === "e!") {
